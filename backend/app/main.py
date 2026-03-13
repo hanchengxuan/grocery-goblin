@@ -1,8 +1,12 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-from .config import settings
+from .config import get_settings
+from .db import get_db
 from .schemas import BasketRequest, BasketResponse, BasketStoreTotal, ProductSearchResult, StoreSummary
 
+settings = get_settings()
 app = FastAPI(title=settings.app_name, version=settings.app_version)
 
 STORES = [
@@ -19,8 +23,9 @@ DEMO_PRODUCTS = [
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "app": settings.app_name, "version": settings.app_version}
+def health(db: Session = Depends(get_db)) -> dict[str, str]:
+    db.execute(text("select 1"))
+    return {"status": "ok", "app": settings.app_name, "version": settings.app_version, "env": settings.app_env}
 
 
 @app.get("/stores", response_model=list[StoreSummary])

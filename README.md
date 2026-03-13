@@ -1,23 +1,52 @@
 # Grocery Goblin
 
-A funny Australian grocery price comparison + Rewards/Flybuys task optimizer.
+Australian grocery savings assistant for basket comparison and loyalty-task ROI.
 
-## Core idea
-Help users answer:
-- Which supermarket is cheaper for this product?
-- Which basket mix is cheapest across Woolworths / Coles / ALDI?
-- Which Rewards / Flybuys tasks are actually worth doing?
-- How can I complete points tasks with the least extra spend?
+## Stack
+- **Mobile/UI direction:** React Native + Expo
+- **API:** FastAPI
+- **Database:** PostgreSQL
+- **Automation workers:** Oracle instance
+- **Optional backend services:** Supabase for auth/storage/data APIs
 
-## Sources
-- Woolworths
-- Coles
-- ALDI
-- Woolworths Rewards
-- Flybuys
+## Product goals
+- Compare grocery products and baskets across Woolworths / Coles / ALDI
+- Surface Woolworths Rewards and Flybuys tasks
+- Estimate task ROI and extra spend required
+- Recommend the cheapest practical shopping strategy
 
-## Principles
-- Start with read-only integrations first
-- Price comparison before automation
-- Task analysis before task activation
-- Human usefulness over scraping cleverness
+## Monorepo layout
+```text
+projects/grocery-goblin/
+├── backend/          # FastAPI app
+├── frontend/         # Expo app scaffold
+├── docs/             # architecture, schema, notes
+├── README.md
+├── PRD.md
+├── STATUS.md
+└── TASKS.md
+```
+
+## Quick start
+### Backend
+```bash
+cd projects/grocery-goblin/backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Then open: <http://127.0.0.1:8000/health>
+
+## First implementation slice
+- FastAPI health endpoint
+- Store seed model
+- Product search API contract draft
+- Basket pricing request/response contract draft
+- Repo/project docs for next build steps
+
+## Notes
+- Start read-only for supermarket and loyalty integrations
+- Price comparison first, automation later
+- Keep the MVP as one repo until deployment/lifecycle pressure justifies a split

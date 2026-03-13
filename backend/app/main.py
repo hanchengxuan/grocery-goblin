@@ -27,6 +27,8 @@ from .vision import (
     derive_barcode_hint,
     derive_ocr_text,
     derive_query_hints,
+    derive_query_hints_from_text,
+    extract_ocr_text_from_image,
     save_uploaded_image,
 )
 
@@ -78,7 +80,6 @@ async def identify_product_from_image(file: UploadFile = File(...), db: Session 
     decoded_barcode, decode_error = decode_barcode_from_image(saved)
     filename_barcode = derive_barcode_hint(file.filename or saved.name)
     barcode = decoded_barcode or filename_barcode
-    barcode_status = None
     if decoded_barcode:
         barcode_status = 'decoded_from_image'
     elif filename_barcode:
@@ -88,8 +89,19 @@ async def identify_product_from_image(file: UploadFile = File(...), db: Session 
     else:
         barcode_status = 'no_barcode_detected'
 
-    ocr_text = derive_ocr_text(file.filename or saved.name)
-    hints = derive_query_hints(file.filename or saved.name)
+    extracted_ocr_text, ocr_error = extract_ocr_text_from_image(saved)
+    fallback_ocr_text = derive_ocr_text(file.filename or saved.name)
+    ocr_text = extracted_ocr_text or fallback_ocr_text
+    if extracted_ocr_text:
+        ocr_status = 'extracted_from_image'
+    elif fallback_ocr_text:
+        ocr_status = 'derived_from_filename'
+    elif ocr_error:
+        ocr_status = f'ocr_unavailable: {ocr_error}'
+    else:
+        ocr_status = 'no_ocr_text_detected'
+
+    hints = derive_query_hints_from_text(ocr_text) or derive_query_hints(file.filename or saved.name)
 
     matches: list[GroupedProductSearchResult] = []
     if barcode:
@@ -107,6 +119,7 @@ async def identify_product_from_image(file: UploadFile = File(...), db: Session 
         barcode=barcode,
         barcode_status=barcode_status,
         ocr_text=ocr_text,
+        ocr_status=ocr_status,
         query_hints=hints,
         matches=matches,
     )

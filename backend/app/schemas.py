@@ -88,5 +88,6 @@ class VisionIdentifyResponse(BaseModel):
     barcode: str | None = None
     barcode_status: str | None = None
     ocr_text: str | None = None
+    ocr_status: str | None = None
     query_hints: list[str]
     matches: list[GroupedProductSearchResult]

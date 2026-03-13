@@ -33,10 +33,18 @@ pip install -r requirements.txt
 ```
 
 ## OCR next step
+Current code path is wired for `pytesseract`, but the host still needs the `tesseract` binary.
+
 Possible options:
 - Tesseract (local, cheap)
 - PaddleOCR
 - Cloud vision model
+
+### Required host package for current OCR path
+```bash
+sudo apt update
+sudo apt install -y tesseract-ocr
+```
 
 ## Recommended sequence
 1. Enable real barcode decoding with `libzbar`

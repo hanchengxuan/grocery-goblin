@@ -16,6 +16,11 @@ try:
 except Exception:  # pragma: no cover
     zbar_decode = None
 
+try:
+    import pytesseract
+except Exception:  # pragma: no cover
+    pytesseract = None
+
 
 BARCODE_RE = re.compile(r'(?:ean|upc|barcode)[-_ ]?(\d{8,14})', re.IGNORECASE)
 
@@ -43,6 +48,20 @@ def decode_barcode_from_image(path: Path) -> tuple[str | None, str | None]:
         return None, str(exc)
 
 
+def extract_ocr_text_from_image(path: Path) -> tuple[str | None, str | None]:
+    if Image is None or pytesseract is None:
+        return None, 'OCR dependencies are not installed'
+    try:
+        image = Image.open(path)
+        text = pytesseract.image_to_string(image).strip()
+        if text:
+            normalized = re.sub(r'\s+', ' ', text)
+            return normalized[:500], None
+        return None, None
+    except Exception as exc:  # pragma: no cover
+        return None, str(exc)
+
+
 def derive_barcode_hint(filename: str) -> str | None:
     match = BARCODE_RE.search(filename)
     if match:
@@ -53,9 +72,10 @@ def derive_barcode_hint(filename: str) -> str | None:
     return None
 
 
-def derive_query_hints(filename: str) -> list[str]:
-    stem = Path(filename).stem.lower()
-    cleaned = re.sub(r'[^a-z0-9]+', ' ', stem)
+def derive_query_hints_from_text(text: str | None) -> list[str]:
+    if not text:
+        return []
+    cleaned = re.sub(r'[^a-z0-9]+', ' ', text.lower())
     tokens = [tok for tok in cleaned.split() if tok and tok not in {'img', 'image', 'photo', 'scan', 'upload', 'ean', 'upc', 'barcode'} and not tok.isdigit()]
     if not tokens:
         return []
@@ -69,6 +89,10 @@ def derive_query_hints(filename: str) -> list[str]:
     if not hints:
         hints.append(' '.join(tokens[:3]))
     return list(dict.fromkeys(hints))
+
+
+def derive_query_hints(filename: str) -> list[str]:
+    return derive_query_hints_from_text(Path(filename).stem)
 
 
 def derive_ocr_text(filename: str) -> str | None:

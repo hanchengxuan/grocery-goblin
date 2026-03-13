@@ -17,6 +17,7 @@ SAMPLE_DATA = [
         "size_label": "per kg",
         "category": "fruit",
         "image_url": "https://images.example.com/products/bananas.jpg",
+        "barcode": "9300000000011",
         "offers": [
             {"store_code": "woolworths", "source_product_ref": "ww-bananas", "image_url": "https://images.example.com/offers/ww-bananas.jpg", "current_price": 3.9, "unit_price_value": 3.9, "unit_price_unit": "kg", "promo_flag": False, "promo_text": None},
             {"store_code": "coles", "source_product_ref": "co-bananas", "image_url": "https://images.example.com/offers/co-bananas.jpg", "current_price": 3.7, "unit_price_value": 3.7, "unit_price_unit": "kg", "promo_flag": False, "promo_text": None},
@@ -29,6 +30,7 @@ SAMPLE_DATA = [
         "size_label": "2L",
         "category": "dairy",
         "image_url": "https://images.example.com/products/full-cream-milk-2l.jpg",
+        "barcode": "9300000000028",
         "offers": [
             {"store_code": "woolworths", "source_product_ref": "ww-milk-2l", "image_url": "https://images.example.com/offers/ww-milk-2l.jpg", "current_price": 3.6, "unit_price_value": 1.8, "unit_price_unit": "L", "promo_flag": False, "promo_text": None},
             {"store_code": "coles", "source_product_ref": "co-milk-2l", "image_url": "https://images.example.com/offers/co-milk-2l.jpg", "current_price": 3.55, "unit_price_value": 1.775, "unit_price_unit": "L", "promo_flag": True, "promo_text": "Down Down"}

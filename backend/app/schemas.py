@@ -12,6 +12,7 @@ class ProductSearchResult(BaseModel):
     name: str
     brand: str | None = None
     image_url: str | None = None
+    barcode: str | None = None
     store: str
     price: float = Field(..., ge=0)
     unit_price: str
@@ -36,6 +37,7 @@ class GroupedProductSearchResult(BaseModel):
     size_label: str | None = None
     category: str | None = None
     image_url: str | None = None
+    barcode: str | None = None
     stores: list[StorePriceResult]
 
 
@@ -56,6 +58,7 @@ class ProductImportRecord(BaseModel):
     size_label: str | None = None
     category: str | None = None
     image_url: str | None = None
+    barcode: str | None = None
     offers: list[ProductImportOffer]
 
 
@@ -82,5 +85,7 @@ class BasketResponse(BaseModel):
 
 class VisionIdentifyResponse(BaseModel):
     uploaded_path: str
+    barcode: str | None = None
+    ocr_text: str | None = None
     query_hints: list[str]
     matches: list[GroupedProductSearchResult]

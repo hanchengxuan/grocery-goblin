@@ -36,9 +36,13 @@ def _base_product_offer_query():
 
 
 def upsert_product_record(db: Session, record: ProductImportRecord) -> Product:
-    product = db.scalar(
-        select(Product).where(func.lower(Product.canonical_name) == record.canonical_name.lower())
-    )
+    product = None
+    if record.barcode:
+        product = db.scalar(select(Product).where(Product.barcode == record.barcode))
+    if not product:
+        product = db.scalar(
+            select(Product).where(func.lower(Product.canonical_name) == record.canonical_name.lower())
+        )
     if not product:
         product = Product(
             canonical_name=record.canonical_name,
@@ -46,6 +50,7 @@ def upsert_product_record(db: Session, record: ProductImportRecord) -> Product:
             size_label=record.size_label,
             category=record.category,
             image_url=record.image_url,
+            barcode=record.barcode,
         )
         db.add(product)
         db.flush()
@@ -54,6 +59,7 @@ def upsert_product_record(db: Session, record: ProductImportRecord) -> Product:
         product.size_label = record.size_label or product.size_label
         product.category = record.category or product.category
         product.image_url = record.image_url or product.image_url
+        product.barcode = record.barcode or product.barcode
 
     now = datetime.now(timezone.utc)
     for offer_in in record.offers:
@@ -139,6 +145,7 @@ def search_products_flat(db: Session, query: str) -> list[ProductSearchResult]:
             name=product.canonical_name,
             brand=product.brand,
             image_url=offer.image_url or product.image_url,
+            barcode=product.barcode,
             store=store.name,
             price=offer.current_price,
             unit_price=_fmt_unit_price(offer.unit_price_value, offer.unit_price_unit),
@@ -157,6 +164,16 @@ def search_products_grouped(db: Session, query: str) -> list[GroupedProductSearc
             stmt = stmt.where(func.lower(Product.canonical_name).like(f"%{token}%"))
 
     rows = db.execute(stmt.limit(200)).all()
+    return _group_product_rows(rows)
+
+
+def search_products_by_barcode(db: Session, barcode: str) -> list[GroupedProductSearchResult]:
+    stmt = _base_product_offer_query().where(Product.barcode == barcode).order_by(Product.canonical_name.asc(), Store.name.asc())
+    rows = db.execute(stmt.limit(50)).all()
+    return _group_product_rows(rows)
+
+
+def _group_product_rows(rows) -> list[GroupedProductSearchResult]:
     grouped: dict[int, GroupedProductSearchResult] = {}
     for offer, product, store in rows:
         entry = grouped.get(product.id)
@@ -168,6 +185,7 @@ def search_products_grouped(db: Session, query: str) -> list[GroupedProductSearc
                 size_label=product.size_label,
                 category=product.category,
                 image_url=product.image_url or offer.image_url,
+                barcode=product.barcode,
                 stores=[],
             )
             grouped[product.id] = entry

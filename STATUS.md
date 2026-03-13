@@ -49,7 +49,8 @@ Grocery Goblin is an Australian grocery savings assistant focused on basket pric
 - Basket recommendation prefers fuller basket coverage, then lower price
 - Default `/products/search` now returns grouped product matches with per-store pricing
 - `/products/search-flat` remains available for raw per-offer debugging
-- First `/vision/identify-product` upload endpoint scaffold exists
+- `/vision/identify-product` now supports barcode-first and OCR-fallback hint extraction scaffold
+- Products can store canonical barcode values for future scan-based lookup
 - Sample data validates end-to-end grouped search + compare flow
 
 ## Next build target
@@ -57,4 +58,4 @@ Grocery Goblin is an Australian grocery savings assistant focused on basket pric
 2. Expand product search filtering/sorting (category, promo, store)
 3. Add scheduled jobs for import + retention
 4. Add lightweight API auth / admin protection for import endpoints/scripts
-5. Start image/vision ingestion path for photo-based product lookup
+5. Replace placeholder barcode/OCR extraction with real libraries/services

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from .catalog import (
     compare_basket as compare_basket_from_db,
+    search_products_by_barcode,
     search_products_flat as search_products_flat_from_db,
     search_products_grouped as search_products_grouped_from_db,
 )
@@ -21,7 +22,7 @@ from .schemas import (
     StoreSummary,
     VisionIdentifyResponse,
 )
-from .vision import derive_query_hints, save_uploaded_image
+from .vision import derive_barcode_hint, derive_ocr_text, derive_query_hints, save_uploaded_image
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version=settings.app_version)
@@ -68,16 +69,25 @@ async def identify_product_from_image(file: UploadFile = File(...), db: Session 
     saved = save_uploaded_image(temp_path, file.filename)
     temp_path.unlink(missing_ok=True)
 
+    barcode = derive_barcode_hint(file.filename or saved.name)
+    ocr_text = derive_ocr_text(file.filename or saved.name)
     hints = derive_query_hints(file.filename or saved.name)
+
     matches: list[GroupedProductSearchResult] = []
-    for hint in hints:
-        results = search_products_grouped_from_db(db, hint)
-        if results:
-            matches = results
-            break
+    if barcode:
+        matches = search_products_by_barcode(db, barcode)
+
+    if not matches:
+        for hint in hints:
+            results = search_products_grouped_from_db(db, hint)
+            if results:
+                matches = results
+                break
 
     return VisionIdentifyResponse(
         uploaded_path=str(saved),
+        barcode=barcode,
+        ocr_text=ocr_text,
         query_hints=hints,
         matches=matches,
     )

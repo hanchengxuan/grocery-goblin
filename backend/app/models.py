@@ -31,6 +31,7 @@ class Product(TimestampMixin, Base):
     size_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
     category: Mapped[str | None] = mapped_column(String(120), nullable=True)
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    barcode: Mapped[str | None] = mapped_column(String(64), unique=True, index=True, nullable=True)
 
     offers: Mapped[list["ProductOffer"]] = relationship(back_populates="product")
 

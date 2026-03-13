@@ -11,6 +11,7 @@ class ProductSearchResult(BaseModel):
     product_id: str
     name: str
     brand: str | None = None
+    image_url: str | None = None
     store: str
     price: float = Field(..., ge=0)
     unit_price: str
@@ -25,6 +26,7 @@ class StorePriceResult(BaseModel):
     unit_price: str = ""
     promo: bool = False
     source_product_ref: str | None = None
+    image_url: str | None = None
 
 
 class GroupedProductSearchResult(BaseModel):
@@ -33,12 +35,14 @@ class GroupedProductSearchResult(BaseModel):
     brand: str | None = None
     size_label: str | None = None
     category: str | None = None
+    image_url: str | None = None
     stores: list[StorePriceResult]
 
 
 class ProductImportOffer(BaseModel):
     store_code: str
     source_product_ref: str | None = None
+    image_url: str | None = None
     current_price: float = Field(..., ge=0)
     unit_price_value: float | None = Field(default=None, ge=0)
     unit_price_unit: str | None = None
@@ -51,6 +55,7 @@ class ProductImportRecord(BaseModel):
     brand: str | None = None
     size_label: str | None = None
     category: str | None = None
+    image_url: str | None = None
     offers: list[ProductImportOffer]
 
 

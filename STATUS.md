@@ -56,3 +56,4 @@ Grocery Goblin is an Australian grocery savings assistant focused on basket pric
 2. Expand product search filtering/sorting (category, promo, store)
 3. Add scheduled jobs for import + retention
 4. Add lightweight API auth / admin protection for import endpoints/scripts
+5. Start image/vision ingestion path for photo-based product lookup

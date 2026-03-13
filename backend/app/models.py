@@ -30,6 +30,7 @@ class Product(TimestampMixin, Base):
     brand: Mapped[str | None] = mapped_column(String(120), nullable=True)
     size_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
     category: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     offers: Mapped[list["ProductOffer"]] = relationship(back_populates="product")
 
@@ -41,6 +42,7 @@ class ProductOffer(TimestampMixin, Base):
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), index=True)
     store_id: Mapped[int] = mapped_column(ForeignKey("stores.id", ondelete="CASCADE"), index=True)
     source_product_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     current_price: Mapped[float] = mapped_column(Float)
     unit_price_value: Mapped[float | None] = mapped_column(Float, nullable=True)
     unit_price_unit: Mapped[str | None] = mapped_column(String(50), nullable=True)

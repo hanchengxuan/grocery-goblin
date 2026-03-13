@@ -45,6 +45,7 @@ def upsert_product_record(db: Session, record: ProductImportRecord) -> Product:
             brand=record.brand,
             size_label=record.size_label,
             category=record.category,
+            image_url=record.image_url,
         )
         db.add(product)
         db.flush()
@@ -52,6 +53,7 @@ def upsert_product_record(db: Session, record: ProductImportRecord) -> Product:
         product.brand = record.brand or product.brand
         product.size_label = record.size_label or product.size_label
         product.category = record.category or product.category
+        product.image_url = record.image_url or product.image_url
 
     now = datetime.now(timezone.utc)
     for offer_in in record.offers:
@@ -88,6 +90,7 @@ def upsert_product_record(db: Session, record: ProductImportRecord) -> Product:
                 product_id=product.id,
                 store_id=store.id,
                 source_product_ref=offer_in.source_product_ref,
+                image_url=offer_in.image_url,
                 current_price=offer_in.current_price,
                 unit_price_value=offer_in.unit_price_value,
                 unit_price_unit=offer_in.unit_price_unit,
@@ -99,6 +102,7 @@ def upsert_product_record(db: Session, record: ProductImportRecord) -> Product:
             db.flush()
         else:
             offer.source_product_ref = offer_in.source_product_ref or offer.source_product_ref
+            offer.image_url = offer_in.image_url or offer.image_url
             offer.current_price = offer_in.current_price
             offer.unit_price_value = offer_in.unit_price_value
             offer.unit_price_unit = offer_in.unit_price_unit
@@ -134,6 +138,7 @@ def search_products_flat(db: Session, query: str) -> list[ProductSearchResult]:
             product_id=str(product.id),
             name=product.canonical_name,
             brand=product.brand,
+            image_url=offer.image_url or product.image_url,
             store=store.name,
             price=offer.current_price,
             unit_price=_fmt_unit_price(offer.unit_price_value, offer.unit_price_unit),
@@ -162,6 +167,7 @@ def search_products_grouped(db: Session, query: str) -> list[GroupedProductSearc
                 brand=product.brand,
                 size_label=product.size_label,
                 category=product.category,
+                image_url=product.image_url or offer.image_url,
                 stores=[],
             )
             grouped[product.id] = entry
@@ -174,6 +180,7 @@ def search_products_grouped(db: Session, query: str) -> list[GroupedProductSearc
                 unit_price=_fmt_unit_price(offer.unit_price_value, offer.unit_price_unit),
                 promo=offer.promo_flag,
                 source_product_ref=offer.source_product_ref,
+                image_url=offer.image_url or product.image_url,
             )
         )
 

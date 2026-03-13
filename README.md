@@ -43,7 +43,7 @@ Then open: <http://127.0.0.1:8000/health>
 - FastAPI health endpoint
 - Supabase-backed stores table
 - Product + offer import/upsert path
-- Grouped `/products/search` returning one product with per-store prices
+- Grouped `/products/search` returning one product with per-store prices and image URLs
 - Optional `/products/search-flat` for debugging/raw store rows
 - Snapshot history write path with retention scaffolding
 - Real basket pricing endpoint backed by stored offer data

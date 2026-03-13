@@ -10,3 +10,4 @@ python-multipart==0.0.20
 Pillow==11.3.0
 pyzbar==0.1.9
 pytesseract==0.3.13
+httpx==0.28.1

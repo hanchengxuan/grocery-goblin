@@ -13,6 +13,13 @@ class Settings(BaseSettings):
     supabase_anon_key: str | None = None
     supabase_service_role_key: str | None = None
 
+    vision_provider: str = "placeholder"
+    openai_api_key: str | None = None
+    openai_vision_model: str = "gpt-4.1-mini"
+    nvidia_nim_api_key: str | None = None
+    nvidia_nim_base_url: str | None = None
+    nvidia_nim_vision_model: str | None = None
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 

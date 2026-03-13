@@ -12,7 +12,8 @@ Support product lookup from a user photo using:
 - Uploaded images are stored under `/data/grocery-goblin/raw/vision-uploads/...`
 - Product model supports canonical `barcode`
 - Barcode-first flow is wired in API logic
-- OCR fallback is currently placeholder text extraction from filename
+- OCR fallback is wired with `pytesseract` / `tesseract`
+- Vision provider selection is now configurable: `placeholder`, `openai`, `nvidia_nim`
 
 ## Real barcode stack
 ### Preferred local path
@@ -51,4 +52,5 @@ sudo apt install -y tesseract-ocr
 1. Enable real barcode decoding with `libzbar`
 2. Validate end-to-end barcode photo lookup
 3. Add real OCR fallback
-4. Improve product matching/ranking
+4. Configure a real vision provider (`openai` or `nvidia_nim`)
+5. Improve product matching/ranking

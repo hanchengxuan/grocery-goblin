@@ -37,8 +37,15 @@ Grocery Goblin is an Australian grocery savings assistant focused on basket pric
 - Retention strategy is now defined: current-offer table + raw snapshots + daily aggregates
 - `/stores` reads from the real database
 
+## Current backend progress
+- `/products/search` now reads from real database rows
+- Product + offer upsert path exists
+- Snapshot writes happen on import path using dedupe logic
+- Sample product importer has been validated against Supabase
+- Retention cleanup script exists for snapshot rollup/purge
+
 ## Next build target
-1. Make `/products/search` read from real product + offer rows
-2. Add importer/upsert path for products and product offers
-3. Start writing snapshots with dedupe rules
-4. Add cron/worker path for retention cleanup
+1. Implement real basket comparison from stored offers
+2. Add importer interfaces for supermarket-specific feeds/parsers
+3. Expand product search filtering/sorting (category, promo, store)
+4. Add scheduled jobs for import + retention

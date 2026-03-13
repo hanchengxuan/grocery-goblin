@@ -10,10 +10,30 @@ class StoreSummary(BaseModel):
 class ProductSearchResult(BaseModel):
     product_id: str
     name: str
+    brand: str | None = None
     store: str
     price: float = Field(..., ge=0)
     unit_price: str
     promo: bool = False
+    category: str | None = None
+
+
+class ProductImportOffer(BaseModel):
+    store_code: str
+    source_product_ref: str | None = None
+    current_price: float = Field(..., ge=0)
+    unit_price_value: float | None = Field(default=None, ge=0)
+    unit_price_unit: str | None = None
+    promo_flag: bool = False
+    promo_text: str | None = None
+
+
+class ProductImportRecord(BaseModel):
+    canonical_name: str
+    brand: str | None = None
+    size_label: str | None = None
+    category: str | None = None
+    offers: list[ProductImportOffer]
 
 
 class BasketItem(BaseModel):

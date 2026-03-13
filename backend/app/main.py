@@ -2,6 +2,7 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
+from .catalog import search_products as search_products_from_db
 from .config import get_settings
 from .db import get_db
 from .models import Store
@@ -9,13 +10,6 @@ from .schemas import BasketRequest, BasketResponse, BasketStoreTotal, ProductSea
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version=settings.app_version)
-
-DEMO_PRODUCTS = [
-    ProductSearchResult(product_id="ww-001", name="Bananas", store="Woolworths", price=3.90, unit_price="$3.90/kg", promo=False),
-    ProductSearchResult(product_id="co-001", name="Bananas", store="Coles", price=3.70, unit_price="$3.70/kg", promo=False),
-    ProductSearchResult(product_id="al-001", name="Bananas", store="ALDI", price=3.49, unit_price="$3.49/kg", promo=False),
-]
-
 
 @app.get("/health")
 def health(db: Session = Depends(get_db)) -> dict[str, str]:
@@ -30,11 +24,8 @@ def list_stores(db: Session = Depends(get_db)) -> list[StoreSummary]:
 
 
 @app.get("/products/search", response_model=list[ProductSearchResult])
-def search_products(q: str = "") -> list[ProductSearchResult]:
-    query = q.strip().lower()
-    if not query:
-        return DEMO_PRODUCTS
-    return [p for p in DEMO_PRODUCTS if query in p.name.lower()]
+def search_products(q: str = "", db: Session = Depends(get_db)) -> list[ProductSearchResult]:
+    return search_products_from_db(db, q)
 
 
 @app.post("/basket/compare", response_model=BasketResponse)

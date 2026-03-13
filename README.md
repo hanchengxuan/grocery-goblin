@@ -39,12 +39,13 @@ uvicorn app.main:app --reload
 
 Then open: <http://127.0.0.1:8000/health>
 
-## First implementation slice
+## Current implementation slice
 - FastAPI health endpoint
-- Store seed model
-- Product search API contract draft
-- Basket pricing request/response contract draft
-- Repo/project docs for next build steps
+- Supabase-backed stores table
+- Product + offer import/upsert path
+- Real `/products/search` backed by DB rows
+- Snapshot history write path with retention scaffolding
+- Basket pricing endpoint still stubbed, next to be connected to real offer data
 
 ## Notes
 - Start read-only for supermarket and loyalty integrations

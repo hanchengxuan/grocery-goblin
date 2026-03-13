@@ -1,11 +1,12 @@
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from .models import PriceSnapshot, Product, ProductOffer, Store
 from .pricing import should_create_snapshot
-from .schemas import ProductImportRecord, ProductSearchResult
+from .schemas import BasketItem, BasketResponse, BasketStoreTotal, ProductImportRecord, ProductSearchResult
 
 
 def _fmt_unit_price(value: float | None, unit: str | None) -> str:
@@ -126,3 +127,39 @@ def search_products(db: Session, query: str) -> list[ProductSearchResult]:
         )
         for offer, product, store in rows
     ]
+
+
+def compare_basket(db: Session, items: list[BasketItem]) -> BasketResponse:
+    store_totals: dict[str, float] = defaultdict(float)
+    store_matches: dict[str, int] = defaultdict(int)
+
+    for item in items:
+        like = f"%{item.query.strip().lower()}%"
+        rows = db.execute(
+            select(ProductOffer, Product, Store)
+            .join(Product, ProductOffer.product_id == Product.id)
+            .join(Store, ProductOffer.store_id == Store.id)
+            .where(func.lower(Product.canonical_name).like(like))
+        ).all()
+
+        best_by_store: dict[str, tuple[ProductOffer, Product, Store]] = {}
+        for offer, product, store in rows:
+            existing = best_by_store.get(store.name)
+            if not existing or offer.current_price < existing[0].current_price:
+                best_by_store[store.name] = (offer, product, store)
+
+        for store_name, (offer, _product, _store) in best_by_store.items():
+            store_totals[store_name] += offer.current_price * item.quantity
+            store_matches[store_name] += 1
+
+    totals = [
+        BasketStoreTotal(store=store, total=round(total, 2), matched_items=store_matches[store])
+        for store, total in sorted(store_totals.items(), key=lambda kv: (-(store_matches[kv[0]]), kv[1], kv[0]))
+    ]
+
+    if not totals:
+        return BasketResponse(currency="AUD", totals=[], recommendation="No matching products found for the requested basket.")
+
+    best = totals[0]
+    recommendation = f"Best current basket: {best.store} with {best.matched_items}/{len(items)} items matched for ${best.total:.2f}."
+    return BasketResponse(currency="AUD", totals=totals, recommendation=recommendation)

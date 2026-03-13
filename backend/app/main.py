@@ -2,7 +2,7 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from .catalog import search_products as search_products_from_db
+from .catalog import compare_basket as compare_basket_from_db, search_products as search_products_from_db
 from .config import get_settings
 from .db import get_db
 from .models import Store
@@ -29,14 +29,5 @@ def search_products(q: str = "", db: Session = Depends(get_db)) -> list[ProductS
 
 
 @app.post("/basket/compare", response_model=BasketResponse)
-def compare_basket(payload: BasketRequest) -> BasketResponse:
-    item_count = sum(item.quantity for item in payload.items) or 1
-    totals = [
-        BasketStoreTotal(store="ALDI", total=round(3.49 * item_count, 2), matched_items=len(payload.items)),
-        BasketStoreTotal(store="Coles", total=round(3.70 * item_count, 2), matched_items=len(payload.items)),
-        BasketStoreTotal(store="Woolworths", total=round(3.90 * item_count, 2), matched_items=len(payload.items)),
-    ]
-    return BasketResponse(
-        totals=totals,
-        recommendation="Demo recommendation: ALDI is currently the cheapest fully matched basket in this stub.",
-    )
+def compare_basket(payload: BasketRequest, db: Session = Depends(get_db)) -> BasketResponse:
+    return compare_basket_from_db(db, payload.items)

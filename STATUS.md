@@ -44,8 +44,13 @@ Grocery Goblin is an Australian grocery savings assistant focused on basket pric
 - Sample product importer has been validated against Supabase
 - Retention cleanup script exists for snapshot rollup/purge
 
+## Current backend progress
+- Real basket comparison now runs from stored `product_offers`
+- Basket recommendation prefers fuller basket coverage, then lower price
+- Sample data validates end-to-end search + compare flow
+
 ## Next build target
-1. Implement real basket comparison from stored offers
-2. Add importer interfaces for supermarket-specific feeds/parsers
-3. Expand product search filtering/sorting (category, promo, store)
-4. Add scheduled jobs for import + retention
+1. Add importer interfaces for supermarket-specific feeds/parsers
+2. Expand product search filtering/sorting (category, promo, store)
+3. Add scheduled jobs for import + retention
+4. Add lightweight API auth / admin protection for import endpoints/scripts

@@ -22,8 +22,11 @@
    - supermarket price ingestion
    - loyalty task sync
    - snapshotting / normalization
+   - retention cleanup / daily aggregate rollups
 3. `db`
    - products
-   - price snapshots
+   - current offers
+   - raw price snapshots
+   - daily price aggregates
    - users
    - loyalty accounts/tasks

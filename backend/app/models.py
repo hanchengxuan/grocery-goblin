@@ -59,9 +59,24 @@ class PriceSnapshot(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     product_offer_id: Mapped[int] = mapped_column(ForeignKey("product_offers.id", ondelete="CASCADE"), index=True)
     observed_price: Mapped[float] = mapped_column(Float)
+    promo_flag: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    unit_price_value: Mapped[float | None] = mapped_column(Float, nullable=True)
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     offer: Mapped["ProductOffer"] = relationship(back_populates="snapshots")
+
+
+class DailyPriceAggregate(Base):
+    __tablename__ = "daily_price_aggregates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_offer_id: Mapped[int] = mapped_column(ForeignKey("product_offers.id", ondelete="CASCADE"), index=True)
+    day: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    min_price: Mapped[float] = mapped_column(Float)
+    max_price: Mapped[float] = mapped_column(Float)
+    avg_price: Mapped[float] = mapped_column(Float)
+    observed_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    last_observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class User(TimestampMixin, Base):

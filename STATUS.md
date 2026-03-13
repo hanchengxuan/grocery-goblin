@@ -29,8 +29,16 @@ Grocery Goblin is an Australian grocery savings assistant focused on basket pric
 - Workspace commit previously recorded: `3a1d8ca` — `Start Grocery Goblin project scaffold`
 - This pass begins turning the docs-only scaffold into a runnable starter monorepo.
 
+## Current backend progress
+- FastAPI backend scaffold exists
+- Supabase database is connected via pooler
+- Initial schema migration has been applied
+- Reference stores have been seeded
+- Retention strategy is now defined: current-offer table + raw snapshots + daily aggregates
+- `/stores` reads from the real database
+
 ## Next build target
-1. Create runnable FastAPI backend skeleton
-2. Add shared docs for repo structure and API/data model direction
-3. Add environment examples and dev commands
-4. Prepare the project to sync/push to the GitHub repo
+1. Make `/products/search` read from real product + offer rows
+2. Add importer/upsert path for products and product offers
+3. Start writing snapshots with dedupe rules
+4. Add cron/worker path for retention cleanup

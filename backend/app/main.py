@@ -2,14 +2,19 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from .catalog import compare_basket as compare_basket_from_db, search_products as search_products_from_db
+from .catalog import (
+    compare_basket as compare_basket_from_db,
+    search_products_flat as search_products_flat_from_db,
+    search_products_grouped as search_products_grouped_from_db,
+)
 from .config import get_settings
 from .db import get_db
 from .models import Store
-from .schemas import BasketRequest, BasketResponse, BasketStoreTotal, ProductSearchResult, StoreSummary
+from .schemas import BasketRequest, BasketResponse, GroupedProductSearchResult, ProductSearchResult, StoreSummary
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version=settings.app_version)
+
 
 @app.get("/health")
 def health(db: Session = Depends(get_db)) -> dict[str, str]:
@@ -23,9 +28,14 @@ def list_stores(db: Session = Depends(get_db)) -> list[StoreSummary]:
     return [StoreSummary(code=row.code, name=row.name, loyalty_program=row.loyalty_program) for row in rows]
 
 
-@app.get("/products/search", response_model=list[ProductSearchResult])
-def search_products(q: str = "", db: Session = Depends(get_db)) -> list[ProductSearchResult]:
-    return search_products_from_db(db, q)
+@app.get("/products/search", response_model=list[GroupedProductSearchResult])
+def search_products(q: str = "", db: Session = Depends(get_db)) -> list[GroupedProductSearchResult]:
+    return search_products_grouped_from_db(db, q)
+
+
+@app.get("/products/search-flat", response_model=list[ProductSearchResult])
+def search_products_flat(q: str = "", db: Session = Depends(get_db)) -> list[ProductSearchResult]:
+    return search_products_flat_from_db(db, q)
 
 
 @app.post("/basket/compare", response_model=BasketResponse)

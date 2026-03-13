@@ -6,13 +6,33 @@ from sqlalchemy.orm import Session
 
 from .models import PriceSnapshot, Product, ProductOffer, Store
 from .pricing import should_create_snapshot
-from .schemas import BasketItem, BasketResponse, BasketStoreTotal, ProductImportRecord, ProductSearchResult
+from .schemas import (
+    BasketItem,
+    BasketResponse,
+    BasketStoreTotal,
+    GroupedProductSearchResult,
+    ProductImportRecord,
+    ProductSearchResult,
+    StorePriceResult,
+)
 
 
 def _fmt_unit_price(value: float | None, unit: str | None) -> str:
     if value is None or not unit:
         return ""
     return f"${value:.2f}/{unit}"
+
+
+def _query_tokens(query: str) -> list[str]:
+    return [tok for tok in query.strip().lower().split() if tok]
+
+
+def _base_product_offer_query():
+    return (
+        select(ProductOffer, Product, Store)
+        .join(Product, ProductOffer.product_id == Product.id)
+        .join(Store, ProductOffer.store_id == Store.id)
+    )
 
 
 def upsert_product_record(db: Session, record: ProductImportRecord) -> Product:
@@ -102,13 +122,8 @@ def upsert_product_record(db: Session, record: ProductImportRecord) -> Product:
     return product
 
 
-def search_products(db: Session, query: str) -> list[ProductSearchResult]:
-    stmt = (
-        select(ProductOffer, Product, Store)
-        .join(Product, ProductOffer.product_id == Product.id)
-        .join(Store, ProductOffer.store_id == Store.id)
-        .order_by(Product.canonical_name.asc(), Store.name.asc())
-    )
+def search_products_flat(db: Session, query: str) -> list[ProductSearchResult]:
+    stmt = _base_product_offer_query().order_by(Product.canonical_name.asc(), Store.name.asc())
     if query.strip():
         like = f"%{query.strip().lower()}%"
         stmt = stmt.where(func.lower(Product.canonical_name).like(like))
@@ -129,18 +144,55 @@ def search_products(db: Session, query: str) -> list[ProductSearchResult]:
     ]
 
 
+def search_products_grouped(db: Session, query: str) -> list[GroupedProductSearchResult]:
+    stmt = _base_product_offer_query().order_by(Product.canonical_name.asc(), Store.name.asc())
+    tokens = _query_tokens(query)
+    if tokens:
+        for token in tokens:
+            stmt = stmt.where(func.lower(Product.canonical_name).like(f"%{token}%"))
+
+    rows = db.execute(stmt.limit(200)).all()
+    grouped: dict[int, GroupedProductSearchResult] = {}
+    for offer, product, store in rows:
+        entry = grouped.get(product.id)
+        if not entry:
+            entry = GroupedProductSearchResult(
+                product_id=str(product.id),
+                name=product.canonical_name,
+                brand=product.brand,
+                size_label=product.size_label,
+                category=product.category,
+                stores=[],
+            )
+            grouped[product.id] = entry
+
+        entry.stores.append(
+            StorePriceResult(
+                store_code=store.code,
+                store_name=store.name,
+                price=offer.current_price,
+                unit_price=_fmt_unit_price(offer.unit_price_value, offer.unit_price_unit),
+                promo=offer.promo_flag,
+                source_product_ref=offer.source_product_ref,
+            )
+        )
+
+    for entry in grouped.values():
+        entry.stores.sort(key=lambda s: (s.price, s.store_name))
+
+    return sorted(grouped.values(), key=lambda item: (item.name.lower(), item.brand or ""))
+
+
 def compare_basket(db: Session, items: list[BasketItem]) -> BasketResponse:
     store_totals: dict[str, float] = defaultdict(float)
     store_matches: dict[str, int] = defaultdict(int)
 
     for item in items:
-        like = f"%{item.query.strip().lower()}%"
-        rows = db.execute(
-            select(ProductOffer, Product, Store)
-            .join(Product, ProductOffer.product_id == Product.id)
-            .join(Store, ProductOffer.store_id == Store.id)
-            .where(func.lower(Product.canonical_name).like(like))
-        ).all()
+        tokens = _query_tokens(item.query)
+        stmt = _base_product_offer_query()
+        for token in tokens:
+            stmt = stmt.where(func.lower(Product.canonical_name).like(f"%{token}%"))
+        rows = db.execute(stmt).all()
 
         best_by_store: dict[str, tuple[ProductOffer, Product, Store]] = {}
         for offer, product, store in rows:

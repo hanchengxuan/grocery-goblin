@@ -18,6 +18,24 @@ class ProductSearchResult(BaseModel):
     category: str | None = None
 
 
+class StorePriceResult(BaseModel):
+    store_code: str
+    store_name: str
+    price: float = Field(..., ge=0)
+    unit_price: str = ""
+    promo: bool = False
+    source_product_ref: str | None = None
+
+
+class GroupedProductSearchResult(BaseModel):
+    product_id: str
+    name: str
+    brand: str | None = None
+    size_label: str | None = None
+    category: str | None = None
+    stores: list[StorePriceResult]
+
+
 class ProductImportOffer(BaseModel):
     store_code: str
     source_product_ref: str | None = None

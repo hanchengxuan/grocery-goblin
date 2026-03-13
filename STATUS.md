@@ -47,7 +47,9 @@ Grocery Goblin is an Australian grocery savings assistant focused on basket pric
 ## Current backend progress
 - Real basket comparison now runs from stored `product_offers`
 - Basket recommendation prefers fuller basket coverage, then lower price
-- Sample data validates end-to-end search + compare flow
+- Default `/products/search` now returns grouped product matches with per-store pricing
+- `/products/search-flat` remains available for raw per-offer debugging
+- Sample data validates end-to-end grouped search + compare flow
 
 ## Next build target
 1. Add importer interfaces for supermarket-specific feeds/parsers

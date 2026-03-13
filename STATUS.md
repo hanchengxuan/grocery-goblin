@@ -49,6 +49,7 @@ Grocery Goblin is an Australian grocery savings assistant focused on basket pric
 - Basket recommendation prefers fuller basket coverage, then lower price
 - Default `/products/search` now returns grouped product matches with per-store pricing
 - `/products/search-flat` remains available for raw per-offer debugging
+- First `/vision/identify-product` upload endpoint scaffold exists
 - Sample data validates end-to-end grouped search + compare flow
 
 ## Next build target

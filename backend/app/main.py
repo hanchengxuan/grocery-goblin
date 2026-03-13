@@ -1,4 +1,7 @@
-from fastapi import Depends, FastAPI
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
@@ -10,7 +13,15 @@ from .catalog import (
 from .config import get_settings
 from .db import get_db
 from .models import Store
-from .schemas import BasketRequest, BasketResponse, GroupedProductSearchResult, ProductSearchResult, StoreSummary
+from .schemas import (
+    BasketRequest,
+    BasketResponse,
+    GroupedProductSearchResult,
+    ProductSearchResult,
+    StoreSummary,
+    VisionIdentifyResponse,
+)
+from .vision import derive_query_hints, save_uploaded_image
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version=settings.app_version)
@@ -41,3 +52,32 @@ def search_products_flat(q: str = "", db: Session = Depends(get_db)) -> list[Pro
 @app.post("/basket/compare", response_model=BasketResponse)
 def compare_basket(payload: BasketRequest, db: Session = Depends(get_db)) -> BasketResponse:
     return compare_basket_from_db(db, payload.items)
+
+
+@app.post("/vision/identify-product", response_model=VisionIdentifyResponse)
+async def identify_product_from_image(file: UploadFile = File(...), db: Session = Depends(get_db)) -> VisionIdentifyResponse:
+    suffix = Path(file.filename or "upload.jpg").suffix.lower()
+    if suffix not in {".jpg", ".jpeg", ".png", ".webp"}:
+        raise HTTPException(status_code=400, detail="Unsupported image type")
+
+    with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        content = await file.read()
+        tmp.write(content)
+        temp_path = Path(tmp.name)
+
+    saved = save_uploaded_image(temp_path, file.filename)
+    temp_path.unlink(missing_ok=True)
+
+    hints = derive_query_hints(file.filename or saved.name)
+    matches: list[GroupedProductSearchResult] = []
+    for hint in hints:
+        results = search_products_grouped_from_db(db, hint)
+        if results:
+            matches = results
+            break
+
+    return VisionIdentifyResponse(
+        uploaded_path=str(saved),
+        query_hints=hints,
+        matches=matches,
+    )

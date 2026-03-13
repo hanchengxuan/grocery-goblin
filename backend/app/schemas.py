@@ -78,3 +78,9 @@ class BasketResponse(BaseModel):
     currency: str = "AUD"
     totals: list[BasketStoreTotal]
     recommendation: str
+
+
+class VisionIdentifyResponse(BaseModel):
+    uploaded_path: str
+    query_hints: list[str]
+    matches: list[GroupedProductSearchResult]

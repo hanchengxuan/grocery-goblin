@@ -3,8 +3,9 @@
 ## Goal
 Support product lookup from a user photo using:
 1. **Barcode-first detection**
-2. **OCR fallback**
-3. Search-based candidate confirmation
+2. **Vision model identification**
+3. **OCR fallback**
+4. Search-based candidate confirmation
 
 ## Current state
 - Upload endpoint exists: `/vision/identify-product`

@@ -49,10 +49,11 @@ Grocery Goblin is an Australian grocery savings assistant focused on basket pric
 - Basket recommendation prefers fuller basket coverage, then lower price
 - Default `/products/search` now returns grouped product matches with per-store pricing
 - `/products/search-flat` remains available for raw per-offer debugging
-- `/vision/identify-product` now supports barcode-first and OCR-fallback logic
+- `/vision/identify-product` now supports barcode-first, OCR, and vision-provider pipeline stages
 - Products can store canonical barcode values for future scan-based lookup
 - Real barcode decoder path is integrated and enabled via `libzbar`
-- OCR extraction code path is integrated; machine still needs `tesseract` system binary for real OCR
+- OCR extraction code path is integrated and ready when `tesseract` is available
+- Vision provider interface + placeholder identifier are integrated for future multimodal model hookup
 - Sample data validates end-to-end grouped search + compare flow
 
 ## Next build target

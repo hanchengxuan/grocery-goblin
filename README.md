@@ -49,7 +49,8 @@ Then open: <http://127.0.0.1:8000/health>
 - Real basket pricing endpoint backed by stored offer data
 - First image-upload identification scaffold at `/vision/identify-product`
 - Barcode-first, OCR-fallback product identification flow scaffold
-- OCR extraction code path integrated (awaiting system `tesseract` binary to enable real OCR)
+- OCR extraction code path integrated (uses `tesseract` when available)
+- Vision provider interface + placeholder multimodal identifier scaffold integrated
 
 ## Notes
 - Start read-only for supermarket and loyalty integrations

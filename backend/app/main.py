@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from .catalog import (
     compare_basket as compare_basket_from_db,
-    search_products_by_barcode,
     search_products_flat as search_products_flat_from_db,
     search_products_grouped as search_products_grouped_from_db,
 )
@@ -22,15 +21,8 @@ from .schemas import (
     StoreSummary,
     VisionIdentifyResponse,
 )
-from .vision import (
-    decode_barcode_from_image,
-    derive_barcode_hint,
-    derive_ocr_text,
-    derive_query_hints,
-    derive_query_hints_from_text,
-    extract_ocr_text_from_image,
-    save_uploaded_image,
-)
+from .vision import save_uploaded_image
+from .vision_pipeline import run_vision_pipeline
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version=settings.app_version)
@@ -76,50 +68,4 @@ async def identify_product_from_image(file: UploadFile = File(...), db: Session 
 
     saved = save_uploaded_image(temp_path, file.filename)
     temp_path.unlink(missing_ok=True)
-
-    decoded_barcode, decode_error = decode_barcode_from_image(saved)
-    filename_barcode = derive_barcode_hint(file.filename or saved.name)
-    barcode = decoded_barcode or filename_barcode
-    if decoded_barcode:
-        barcode_status = 'decoded_from_image'
-    elif filename_barcode:
-        barcode_status = 'derived_from_filename'
-    elif decode_error:
-        barcode_status = f'barcode_decoder_unavailable: {decode_error}'
-    else:
-        barcode_status = 'no_barcode_detected'
-
-    extracted_ocr_text, ocr_error = extract_ocr_text_from_image(saved)
-    fallback_ocr_text = derive_ocr_text(file.filename or saved.name)
-    ocr_text = extracted_ocr_text or fallback_ocr_text
-    if extracted_ocr_text:
-        ocr_status = 'extracted_from_image'
-    elif fallback_ocr_text:
-        ocr_status = 'derived_from_filename'
-    elif ocr_error:
-        ocr_status = f'ocr_unavailable: {ocr_error}'
-    else:
-        ocr_status = 'no_ocr_text_detected'
-
-    hints = derive_query_hints_from_text(ocr_text) or derive_query_hints(file.filename or saved.name)
-
-    matches: list[GroupedProductSearchResult] = []
-    if barcode:
-        matches = search_products_by_barcode(db, barcode)
-
-    if not matches:
-        for hint in hints:
-            results = search_products_grouped_from_db(db, hint)
-            if results:
-                matches = results
-                break
-
-    return VisionIdentifyResponse(
-        uploaded_path=str(saved),
-        barcode=barcode,
-        barcode_status=barcode_status,
-        ocr_text=ocr_text,
-        ocr_status=ocr_status,
-        query_hints=hints,
-        matches=matches,
-    )
+    return run_vision_pipeline(db, saved, file.filename)

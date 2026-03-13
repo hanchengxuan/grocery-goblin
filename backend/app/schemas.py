@@ -83,11 +83,24 @@ class BasketResponse(BaseModel):
     recommendation: str
 
 
+class VisionIdentification(BaseModel):
+    provider: str
+    name: str | None = None
+    brand: str | None = None
+    size_label: str | None = None
+    category: str | None = None
+    barcode: str | None = None
+    confidence: float = Field(default=0.0, ge=0, le=1)
+    raw_text: str | None = None
+
+
 class VisionIdentifyResponse(BaseModel):
     uploaded_path: str
     barcode: str | None = None
     barcode_status: str | None = None
     ocr_text: str | None = None
     ocr_status: str | None = None
+    vision: VisionIdentification | None = None
+    vision_status: str | None = None
     query_hints: list[str]
     matches: list[GroupedProductSearchResult]

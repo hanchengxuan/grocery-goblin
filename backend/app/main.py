@@ -22,7 +22,13 @@ from .schemas import (
     StoreSummary,
     VisionIdentifyResponse,
 )
-from .vision import derive_barcode_hint, derive_ocr_text, derive_query_hints, save_uploaded_image
+from .vision import (
+    decode_barcode_from_image,
+    derive_barcode_hint,
+    derive_ocr_text,
+    derive_query_hints,
+    save_uploaded_image,
+)
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version=settings.app_version)
@@ -69,7 +75,19 @@ async def identify_product_from_image(file: UploadFile = File(...), db: Session 
     saved = save_uploaded_image(temp_path, file.filename)
     temp_path.unlink(missing_ok=True)
 
-    barcode = derive_barcode_hint(file.filename or saved.name)
+    decoded_barcode, decode_error = decode_barcode_from_image(saved)
+    filename_barcode = derive_barcode_hint(file.filename or saved.name)
+    barcode = decoded_barcode or filename_barcode
+    barcode_status = None
+    if decoded_barcode:
+        barcode_status = 'decoded_from_image'
+    elif filename_barcode:
+        barcode_status = 'derived_from_filename'
+    elif decode_error:
+        barcode_status = f'barcode_decoder_unavailable: {decode_error}'
+    else:
+        barcode_status = 'no_barcode_detected'
+
     ocr_text = derive_ocr_text(file.filename or saved.name)
     hints = derive_query_hints(file.filename or saved.name)
 
@@ -87,6 +105,7 @@ async def identify_product_from_image(file: UploadFile = File(...), db: Session 
     return VisionIdentifyResponse(
         uploaded_path=str(saved),
         barcode=barcode,
+        barcode_status=barcode_status,
         ocr_text=ocr_text,
         query_hints=hints,
         matches=matches,

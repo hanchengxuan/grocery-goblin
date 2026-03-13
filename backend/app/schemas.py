@@ -86,6 +86,7 @@ class BasketResponse(BaseModel):
 class VisionIdentifyResponse(BaseModel):
     uploaded_path: str
     barcode: str | None = None
+    barcode_status: str | None = None
     ocr_text: str | None = None
     query_hints: list[str]
     matches: list[GroupedProductSearchResult]

@@ -6,6 +6,16 @@ import uuid
 
 from .storage import dated_raw_dir
 
+try:
+    from PIL import Image
+except Exception:  # pragma: no cover
+    Image = None
+
+try:
+    from pyzbar.pyzbar import decode as zbar_decode
+except Exception:  # pragma: no cover
+    zbar_decode = None
+
 
 BARCODE_RE = re.compile(r'(?:ean|upc|barcode)[-_ ]?(\d{8,14})', re.IGNORECASE)
 
@@ -16,6 +26,21 @@ def save_uploaded_image(temp_path: Path, filename: str | None = None) -> Path:
     target = target_dir / f"{uuid.uuid4().hex}{suffix}"
     shutil.copy2(temp_path, target)
     return target
+
+
+def decode_barcode_from_image(path: Path) -> tuple[str | None, str | None]:
+    if Image is None or zbar_decode is None:
+        return None, 'Barcode decoder dependencies are not installed'
+    try:
+        image = Image.open(path)
+        decoded = zbar_decode(image)
+        for item in decoded:
+            text = item.data.decode('utf-8', errors='ignore').strip()
+            if text:
+                return text, None
+        return None, None
+    except Exception as exc:  # pragma: no cover
+        return None, str(exc)
 
 
 def derive_barcode_hint(filename: str) -> str | None:

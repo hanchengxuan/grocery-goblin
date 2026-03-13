@@ -9,7 +9,13 @@ from app import models  # noqa: F401
 
 config = context.config
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+
+def _normalize_database_url(url: str) -> str:
+    if url.startswith("postgresql://") and "+" not in url.split("://", 1)[0]:
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
+
+config.set_main_option("sqlalchemy.url", _normalize_database_url(settings.database_url))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

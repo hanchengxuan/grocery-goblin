@@ -1,19 +1,14 @@
 from fastapi import Depends, FastAPI
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from .config import get_settings
 from .db import get_db
+from .models import Store
 from .schemas import BasketRequest, BasketResponse, BasketStoreTotal, ProductSearchResult, StoreSummary
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version=settings.app_version)
-
-STORES = [
-    StoreSummary(code="woolworths", name="Woolworths", loyalty_program="Woolworths Rewards"),
-    StoreSummary(code="coles", name="Coles", loyalty_program="Flybuys"),
-    StoreSummary(code="aldi", name="ALDI", loyalty_program=None),
-]
 
 DEMO_PRODUCTS = [
     ProductSearchResult(product_id="ww-001", name="Bananas", store="Woolworths", price=3.90, unit_price="$3.90/kg", promo=False),
@@ -29,8 +24,9 @@ def health(db: Session = Depends(get_db)) -> dict[str, str]:
 
 
 @app.get("/stores", response_model=list[StoreSummary])
-def list_stores() -> list[StoreSummary]:
-    return STORES
+def list_stores(db: Session = Depends(get_db)) -> list[StoreSummary]:
+    rows = db.scalars(select(Store).order_by(Store.name.asc())).all()
+    return [StoreSummary(code=row.code, name=row.name, loyalty_program=row.loyalty_program) for row in rows]
 
 
 @app.get("/products/search", response_model=list[ProductSearchResult])

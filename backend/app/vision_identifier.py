@@ -1,4 +1,6 @@
 import base64
+import json
+import re
 from pathlib import Path
 from typing import Protocol
 
@@ -39,13 +41,31 @@ class PlaceholderVisionProvider:
 
 
 class OpenAICompatibleVisionProvider:
-    def __init__(self, *, provider_name: str, api_key: str, base_url: str, model: str):
+    def __init__(self, *, provider_name: str, api_key: str, base_url: str, model: str, timeout_seconds: int = 120):
         self.provider_name = provider_name
         self.api_key = api_key
         self.base_url = base_url.rstrip('/')
         self.model = model
+        self.timeout_seconds = timeout_seconds
+        self.last_error: str | None = None
+        self.last_response_preview: str | None = None
+
+    def _extract_json_object(self, text: str) -> dict:
+        cleaned = text.strip()
+        if cleaned.startswith('```'):
+            cleaned = re.sub(r'^```(?:json)?', '', cleaned).strip()
+            cleaned = re.sub(r'```$', '', cleaned).strip()
+        try:
+            return json.loads(cleaned)
+        except Exception:
+            match = re.search(r'\{.*\}', cleaned, re.S)
+            if match:
+                return json.loads(match.group(0))
+            raise
 
     def identify(self, image_path: Path) -> VisionIdentification | None:
+        self.last_error = None
+        self.last_response_preview = None
         mime = 'image/jpeg'
         if image_path.suffix.lower() == '.png':
             mime = 'image/png'
@@ -53,9 +73,9 @@ class OpenAICompatibleVisionProvider:
             mime = 'image/webp'
         image_b64 = base64.b64encode(image_path.read_bytes()).decode('utf-8')
         prompt = (
-            'Identify this grocery product and return a compact JSON object with keys: '
-            'name, brand, size_label, category, barcode, confidence, raw_text. '
-            'If unknown, use nulls and low confidence. Output JSON only.'
+            'Identify the grocery product in this image. '
+            'Return JSON only with keys: name, brand, size_label, category, barcode, confidence, raw_text. '
+            'Keep confidence between 0 and 1. Use null when unknown. No markdown.'
         )
         payload = {
             'model': self.model,
@@ -69,18 +89,21 @@ class OpenAICompatibleVisionProvider:
                 }
             ],
             'temperature': 0,
+            'max_tokens': 300,
+            'stream': False,
         }
         headers = {'Authorization': f'Bearer {self.api_key}', 'Content-Type': 'application/json'}
         try:
-            with httpx.Client(timeout=60) as client:
+            timeout = httpx.Timeout(connect=20, read=self.timeout_seconds, write=30, pool=30)
+            with httpx.Client(timeout=timeout) as client:
                 response = client.post(f'{self.base_url}/chat/completions', headers=headers, json=payload)
                 response.raise_for_status()
                 data = response.json()
             text = data['choices'][0]['message']['content']
             if isinstance(text, list):
                 text = ''.join(part.get('text', '') for part in text if isinstance(part, dict))
-            import json
-            obj = json.loads(text)
+            self.last_response_preview = str(text)[:1200]
+            obj = self._extract_json_object(str(text))
             return VisionIdentification(
                 provider=self.provider_name,
                 name=obj.get('name'),
@@ -91,7 +114,84 @@ class OpenAICompatibleVisionProvider:
                 confidence=float(obj.get('confidence') or 0),
                 raw_text=obj.get('raw_text'),
             )
+        except Exception as exc:
+            self.last_error = str(exc)
+            return None
+
+
+class GeminiVisionProvider:
+    def __init__(self, *, api_key: str, model: str, timeout_seconds: int = 120):
+        self.api_key = api_key
+        self.model = model
+        self.timeout_seconds = timeout_seconds
+        self.last_error: str | None = None
+        self.last_response_preview: str | None = None
+
+    def _extract_json_object(self, text: str) -> dict:
+        cleaned = text.strip()
+        if cleaned.startswith('```'):
+            cleaned = re.sub(r'^```(?:json)?', '', cleaned).strip()
+            cleaned = re.sub(r'```$', '', cleaned).strip()
+        try:
+            return json.loads(cleaned)
         except Exception:
+            match = re.search(r'\{.*\}', cleaned, re.S)
+            if match:
+                return json.loads(match.group(0))
+            raise
+
+    def identify(self, image_path: Path) -> VisionIdentification | None:
+        self.last_error = None
+        self.last_response_preview = None
+        mime = 'image/jpeg'
+        if image_path.suffix.lower() == '.png':
+            mime = 'image/png'
+        elif image_path.suffix.lower() == '.webp':
+            mime = 'image/webp'
+        image_b64 = base64.b64encode(image_path.read_bytes()).decode('utf-8')
+        prompt = (
+            'Identify the grocery product in this image. '
+            'Return JSON only with keys: name, brand, size_label, category, barcode, confidence, raw_text. '
+            'Keep confidence between 0 and 1. Use null when unknown. No markdown.'
+        )
+        payload = {
+            'contents': [
+                {
+                    'role': 'user',
+                    'parts': [
+                        {'text': prompt},
+                        {'inline_data': {'mime_type': mime, 'data': image_b64}},
+                    ],
+                }
+            ],
+            'generationConfig': {
+                'temperature': 0,
+                'responseMimeType': 'application/json',
+                'maxOutputTokens': 300,
+            },
+        }
+        url = f'https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}'
+        try:
+            timeout = httpx.Timeout(connect=20, read=self.timeout_seconds, write=30, pool=30)
+            with httpx.Client(timeout=timeout) as client:
+                response = client.post(url, json=payload)
+                response.raise_for_status()
+                data = response.json()
+            text = data['candidates'][0]['content']['parts'][0]['text']
+            self.last_response_preview = str(text)[:1200]
+            obj = self._extract_json_object(str(text))
+            return VisionIdentification(
+                provider='gemini',
+                name=obj.get('name'),
+                brand=obj.get('brand'),
+                size_label=obj.get('size_label'),
+                category=obj.get('category'),
+                barcode=obj.get('barcode'),
+                confidence=float(obj.get('confidence') or 0),
+                raw_text=obj.get('raw_text'),
+            )
+        except Exception as exc:
+            self.last_error = str(exc)
             return None
 
 
@@ -104,6 +204,13 @@ def get_vision_provider() -> VisionProvider:
             api_key=settings.openai_api_key,
             base_url='https://api.openai.com/v1',
             model=settings.openai_vision_model,
+            timeout_seconds=settings.vision_timeout_seconds,
+        )
+    if provider == 'gemini' and settings.gemini_api_key:
+        return GeminiVisionProvider(
+            api_key=settings.gemini_api_key,
+            model=settings.gemini_vision_model,
+            timeout_seconds=settings.vision_timeout_seconds,
         )
     if provider in {'nvidia_nim', 'nvidia_nim_kimi', 'kimi'} and settings.nvidia_nim_api_key and settings.nvidia_nim_base_url and settings.nvidia_nim_vision_model:
         return OpenAICompatibleVisionProvider(
@@ -111,6 +218,7 @@ def get_vision_provider() -> VisionProvider:
             api_key=settings.nvidia_nim_api_key,
             base_url=settings.nvidia_nim_base_url,
             model=settings.nvidia_nim_vision_model,
+            timeout_seconds=settings.vision_timeout_seconds,
         )
     return PlaceholderVisionProvider()
 

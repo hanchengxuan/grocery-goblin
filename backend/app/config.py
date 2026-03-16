@@ -16,9 +16,12 @@ class Settings(BaseSettings):
     vision_provider: str = "placeholder"
     openai_api_key: str | None = None
     openai_vision_model: str = "gpt-4.1-mini"
+    gemini_api_key: str | None = None
+    gemini_vision_model: str = "gemini-2.5-flash"
     nvidia_nim_api_key: str | None = None
     nvidia_nim_base_url: str | None = None
     nvidia_nim_vision_model: str | None = None
+    vision_timeout_seconds: int = 240
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

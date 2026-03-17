@@ -40,16 +40,7 @@ class PlaceholderVisionProvider:
         return None
 
 
-class OpenAICompatibleVisionProvider:
-    def __init__(self, *, provider_name: str, api_key: str, base_url: str, model: str, timeout_seconds: int = 120):
-        self.provider_name = provider_name
-        self.api_key = api_key
-        self.base_url = base_url.rstrip('/')
-        self.model = model
-        self.timeout_seconds = timeout_seconds
-        self.last_error: str | None = None
-        self.last_response_preview: str | None = None
-
+class _JsonRecoveryMixin:
     def _extract_json_object(self, text: str) -> dict:
         cleaned = text.strip()
         if cleaned.startswith('```'):
@@ -60,8 +51,54 @@ class OpenAICompatibleVisionProvider:
         except Exception:
             match = re.search(r'\{.*\}', cleaned, re.S)
             if match:
-                return json.loads(match.group(0))
+                candidate = match.group(0)
+                try:
+                    return json.loads(candidate)
+                except Exception:
+                    recovered = self._recover_partial_fields(candidate)
+                    if recovered:
+                        return recovered
+            recovered = self._recover_partial_fields(cleaned)
+            if recovered:
+                return recovered
             raise
+
+    def _recover_partial_fields(self, text: str) -> dict | None:
+        fields: dict[str, object] = {}
+        str_patterns = {
+            'name': r'"name"\s*:\s*"([^"]*)',
+            'brand': r'"brand"\s*:\s*"([^"]*)',
+            'size_label': r'"size_label"\s*:\s*"([^"]*)',
+            'category': r'"category"\s*:\s*"([^"]*)',
+            'barcode': r'"barcode"\s*:\s*"([^"]*)',
+            'raw_text': r'"raw_text"\s*:\s*"([^"]*)',
+        }
+        for key, pattern in str_patterns.items():
+            m = re.search(pattern, text, re.S)
+            if m:
+                fields[key] = m.group(1)
+            elif re.search(rf'"{key}"\s*:\s*null', text):
+                fields[key] = None
+        m = re.search(r'"confidence"\s*:\s*([0-9]+(?:\.[0-9]+)?)', text)
+        if m:
+            fields['confidence'] = float(m.group(1))
+        elif re.search(r'"confidence"\s*:\s*null', text):
+            fields['confidence'] = 0.0
+        if any(k in fields for k in ('name', 'brand', 'size_label', 'category', 'barcode', 'raw_text', 'confidence')):
+            fields.setdefault('confidence', 0.0)
+            return fields
+        return None
+
+
+class OpenAICompatibleVisionProvider(_JsonRecoveryMixin):
+    def __init__(self, *, provider_name: str, api_key: str, base_url: str, model: str, timeout_seconds: int = 120):
+        self.provider_name = provider_name
+        self.api_key = api_key
+        self.base_url = base_url.rstrip('/')
+        self.model = model
+        self.timeout_seconds = timeout_seconds
+        self.last_error: str | None = None
+        self.last_response_preview: str | None = None
 
     def identify(self, image_path: Path) -> VisionIdentification | None:
         self.last_error = None
@@ -75,7 +112,7 @@ class OpenAICompatibleVisionProvider:
         prompt = (
             'Identify the grocery product in this image. '
             'Return JSON only with keys: name, brand, size_label, category, barcode, confidence, raw_text. '
-            'Keep confidence between 0 and 1. Use null when unknown. No markdown.'
+            'Keep raw_text under 80 chars. Keep confidence between 0 and 1. Use null when unknown. No markdown.'
         )
         payload = {
             'model': self.model,
@@ -89,7 +126,7 @@ class OpenAICompatibleVisionProvider:
                 }
             ],
             'temperature': 0,
-            'max_tokens': 300,
+            'max_tokens': 180,
             'stream': False,
         }
         headers = {'Authorization': f'Bearer {self.api_key}', 'Content-Type': 'application/json'}
@@ -119,26 +156,13 @@ class OpenAICompatibleVisionProvider:
             return None
 
 
-class GeminiVisionProvider:
+class GeminiVisionProvider(_JsonRecoveryMixin):
     def __init__(self, *, api_key: str, model: str, timeout_seconds: int = 120):
         self.api_key = api_key
         self.model = model
         self.timeout_seconds = timeout_seconds
         self.last_error: str | None = None
         self.last_response_preview: str | None = None
-
-    def _extract_json_object(self, text: str) -> dict:
-        cleaned = text.strip()
-        if cleaned.startswith('```'):
-            cleaned = re.sub(r'^```(?:json)?', '', cleaned).strip()
-            cleaned = re.sub(r'```$', '', cleaned).strip()
-        try:
-            return json.loads(cleaned)
-        except Exception:
-            match = re.search(r'\{.*\}', cleaned, re.S)
-            if match:
-                return json.loads(match.group(0))
-            raise
 
     def identify(self, image_path: Path) -> VisionIdentification | None:
         self.last_error = None
@@ -152,7 +176,7 @@ class GeminiVisionProvider:
         prompt = (
             'Identify the grocery product in this image. '
             'Return JSON only with keys: name, brand, size_label, category, barcode, confidence, raw_text. '
-            'Keep confidence between 0 and 1. Use null when unknown. No markdown.'
+            'Keep raw_text under 80 chars. Keep confidence between 0 and 1. Use null when unknown. No markdown.'
         )
         payload = {
             'contents': [
@@ -167,7 +191,7 @@ class GeminiVisionProvider:
             'generationConfig': {
                 'temperature': 0,
                 'responseMimeType': 'application/json',
-                'maxOutputTokens': 300,
+                'maxOutputTokens': 180,
             },
         }
         url = f'https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}'

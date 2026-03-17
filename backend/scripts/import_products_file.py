@@ -13,7 +13,7 @@ from app.importers import load_import_records
 
 def main() -> None:
     if len(sys.argv) < 2:
-        raise SystemExit("Usage: python scripts/import_products_file.py <path> [json]")
+        raise SystemExit("Usage: python scripts/import_products_file.py <path> [json|woolworths|coles|aldi]")
     path = Path(sys.argv[1]).resolve()
     source = sys.argv[2] if len(sys.argv) > 2 else "json"
     records = load_import_records(path, source=source)

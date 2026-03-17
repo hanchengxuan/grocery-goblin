@@ -1,0 +1,16 @@
+[
+  {
+    "product_id": "ww-oats-1kg",
+    "name": "Traditional Rolled Oats",
+    "brand": "Woolworths",
+    "size": "1kg",
+    "category": "breakfast",
+    "image_url": "https://images.example.com/offers/ww-oats-1kg.jpg",
+    "barcode": "9300000000103",
+    "price": 2.8,
+    "unit_price_value": 0.28,
+    "unit_price_unit": "100g",
+    "on_special": false,
+    "special_text": null
+  }
+]

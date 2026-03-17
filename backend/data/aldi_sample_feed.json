@@ -1,0 +1,16 @@
+[
+  {
+    "product_id": "al-muesli-bars-180g",
+    "name": "Choc Chip Muesli Bars",
+    "brand": "ALDI",
+    "size": "180g",
+    "category": "snack",
+    "image_url": "https://images.example.com/offers/al-muesli-bars-180g.jpg",
+    "barcode": "9300000000301",
+    "price": 2.49,
+    "unit_price_value": 1.38,
+    "unit_price_unit": "100g",
+    "on_special": false,
+    "special_text": null
+  }
+]

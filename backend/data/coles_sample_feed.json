@@ -1,0 +1,16 @@
+[
+  {
+    "product_id": "co-peanut-butter-375g",
+    "name": "Smooth Peanut Butter",
+    "brand": "Coles",
+    "size": "375g",
+    "category": "pantry",
+    "image_url": "https://images.example.com/offers/co-peanut-butter-375g.jpg",
+    "barcode": "9300000000202",
+    "price": 3.7,
+    "unit_price_value": 0.99,
+    "unit_price_unit": "100g",
+    "on_special": true,
+    "special_text": "Down Down"
+  }
+]

@@ -52,7 +52,7 @@ Then open: <http://127.0.0.1:8000/health>
 - OCR extraction code path integrated (uses `tesseract` when available)
 - Vision provider interface + working Gemini multimodal identifier integrated
 - Generic JSON product importer scaffold available for loading real catalog samples
-- Store-specific importer skeletons exist for Woolworths / Coles / ALDI feeds
+- Store-specific importer skeletons exist for Woolworths / Coles / ALDI feeds, with sample feed fixtures for all three
 
 ## Notes
 - Start read-only for supermarket and loyalty integrations

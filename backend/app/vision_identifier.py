@@ -160,24 +160,13 @@ class OpenAICompatibleVisionProvider(_JsonRecoveryMixin):
             return None
 
 
-class GeminiVisionProvider:
+class GeminiVisionProvider(_JsonRecoveryMixin):
     def __init__(self, *, api_key: str, model: str, timeout_seconds: int = 120):
         self.api_key = api_key
         self.model = model
         self.timeout_seconds = timeout_seconds
         self.last_error: str | None = None
         self.last_response_preview: str | None = None
-
-    def _extract_field(self, text: str, label: str) -> str | None:
-        m = re.search(rf'{label}\s*[:\-]\s*(.+)', text, re.I)
-        if not m:
-            return None
-        value = m.group(1).strip()
-        value = re.split(r'\n|\r', value)[0].strip()
-        value = value.strip('"*` ')
-        if value.lower() in {'null', 'none', 'unknown', 'n/a', 'not visible'}:
-            return None
-        return value[:120]
 
     def identify(self, image_path: Path) -> VisionIdentification | None:
         self.last_error = None
@@ -189,12 +178,10 @@ class GeminiVisionProvider:
             mime = 'image/webp'
         image_b64 = base64.b64encode(image_path.read_bytes()).decode('utf-8')
         prompt = (
-            'Identify the grocery product in this image. '
-            'Respond in exactly three short lines only, nothing else:\n'
-            'NAME: ...\n'
-            'BRAND: ...\n'
-            'SIZE_LABEL: ...\n'
-            'Use null when unknown.'
+            'Extract grocery product information from this image. '
+            'Only identify the main retail product visible on the package front. '
+            'Return only JSON matching the provided schema. '
+            'Use null for unknown values. Keep name complete and concise.'
         )
         payload = {
             'contents': [
@@ -208,7 +195,20 @@ class GeminiVisionProvider:
             ],
             'generationConfig': {
                 'temperature': 0,
-                'maxOutputTokens': 80,
+                'responseMimeType': 'application/json',
+                'responseSchema': {
+                    'type': 'OBJECT',
+                    'required': ['name', 'brand', 'size_label', 'category'],
+                    'properties': {
+                        'name': {'type': 'STRING', 'description': 'Complete product name visible on the front of pack.'},
+                        'brand': {'type': 'STRING', 'nullable': True, 'description': 'Brand name.'},
+                        'size_label': {'type': 'STRING', 'nullable': True, 'description': 'Pack size like 450g or 2L.'},
+                        'category': {'type': 'STRING', 'nullable': True, 'description': 'Simple grocery category such as cereal, dairy, snack.'},
+                    },
+                    'propertyOrdering': ['name', 'brand', 'size_label', 'category'],
+                },
+                'maxOutputTokens': 120,
+                'thinkingConfig': {'thinkingBudget': 0},
             },
         }
         url = f'https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}'
@@ -220,15 +220,17 @@ class GeminiVisionProvider:
                 data = response.json()
             text = data['candidates'][0]['content']['parts'][0]['text']
             self.last_response_preview = str(text)[:1200]
+            obj = self._extract_json_object(str(text))
+            name = obj.get('name')
             return VisionIdentification(
                 provider='gemini',
-                name=self._extract_field(text, 'NAME'),
-                brand=self._extract_field(text, 'BRAND'),
-                size_label=self._extract_field(text, 'SIZE_LABEL'),
-                category=None,
+                name=name,
+                brand=obj.get('brand'),
+                size_label=obj.get('size_label'),
+                category=obj.get('category'),
                 barcode=None,
-                confidence=0.7 if self._extract_field(text, 'NAME') else 0.0,
-                raw_text=str(text)[:500],
+                confidence=0.85 if name else 0.0,
+                raw_text=None,
             )
         except Exception as exc:
             self.last_error = str(exc)

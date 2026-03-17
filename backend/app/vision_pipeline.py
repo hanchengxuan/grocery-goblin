@@ -2,7 +2,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from .catalog import search_products_by_barcode, search_products_grouped
+from .catalog import search_products_by_barcode, search_products_from_identification, search_products_grouped
 from .schemas import GroupedProductSearchResult, VisionIdentifyResponse
 from .vision import (
     decode_barcode_from_image,
@@ -63,6 +63,8 @@ def run_vision_pipeline(db: Session, saved_path: Path, original_filename: str | 
     matches: list[GroupedProductSearchResult] = []
     if barcode:
         matches = search_products_by_barcode(db, barcode)
+    if not matches and vision_result and any([vision_result.name, vision_result.brand, vision_result.size_label, vision_result.category]):
+        matches = search_products_from_identification(db, vision_result)
     if not matches:
         for hint in hints:
             results = search_products_grouped(db, hint)

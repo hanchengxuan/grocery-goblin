@@ -14,6 +14,7 @@ from .schemas import (
     ProductImportRecord,
     ProductSearchResult,
     StorePriceResult,
+    VisionIdentification,
 )
 
 
@@ -170,6 +171,28 @@ def search_products_grouped(db: Session, query: str) -> list[GroupedProductSearc
 def search_products_by_barcode(db: Session, barcode: str) -> list[GroupedProductSearchResult]:
     stmt = _base_product_offer_query().where(Product.barcode == barcode).order_by(Product.canonical_name.asc(), Store.name.asc())
     rows = db.execute(stmt.limit(50)).all()
+    return _group_product_rows(rows)
+
+
+def search_products_from_identification(db: Session, vision: VisionIdentification) -> list[GroupedProductSearchResult]:
+    stmt = _base_product_offer_query().order_by(Product.canonical_name.asc(), Store.name.asc())
+
+    name_tokens = _query_tokens(vision.name or '')
+    if name_tokens:
+        for token in name_tokens:
+            if len(token) >= 3:
+                stmt = stmt.where(func.lower(Product.canonical_name).like(f"%{token}%"))
+
+    if vision.brand:
+        stmt = stmt.where(func.lower(func.coalesce(Product.brand, '')).like(f"%{vision.brand.lower()}%"))
+
+    if vision.size_label:
+        stmt = stmt.where(func.lower(func.coalesce(Product.size_label, '')).like(f"%{vision.size_label.lower()}%"))
+
+    if vision.category:
+        stmt = stmt.where(func.lower(func.coalesce(Product.category, '')).like(f"%{vision.category.lower()}%"))
+
+    rows = db.execute(stmt.limit(100)).all()
     return _group_product_rows(rows)
 
 

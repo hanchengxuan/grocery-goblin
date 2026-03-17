@@ -47,10 +47,17 @@ def run_vision_pipeline(db: Session, saved_path: Path, original_filename: str | 
 
     hints = []
     if vision_result:
-        for candidate in [vision_result.name, f"{vision_result.brand or ''} {vision_result.name or ''}".strip(), vision_result.size_label]:
+        for candidate in [
+            vision_result.name,
+            f"{vision_result.brand or ''} {vision_result.name or ''}".strip(),
+            f"{vision_result.name or ''} {vision_result.size_label or ''}".strip(),
+            vision_result.raw_text,
+        ]:
             if candidate:
                 hints.extend(derive_query_hints_from_text(candidate))
-    hints = hints or derive_query_hints_from_text(ocr_text) or derive_query_hints(source_name)
+    if ocr_text:
+        hints.extend(derive_query_hints_from_text(ocr_text))
+    hints = hints or derive_query_hints(source_name)
     hints = list(dict.fromkeys([h for h in hints if h]))
 
     matches: list[GroupedProductSearchResult] = []

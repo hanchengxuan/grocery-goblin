@@ -46,6 +46,9 @@ class _JsonRecoveryMixin:
         if cleaned.startswith('```'):
             cleaned = re.sub(r'^```(?:json)?', '', cleaned).strip()
             cleaned = re.sub(r'```$', '', cleaned).strip()
+        first_brace = cleaned.find('{')
+        if first_brace > 0:
+            cleaned = cleaned[first_brace:]
         try:
             return json.loads(cleaned)
         except Exception:
@@ -111,8 +114,9 @@ class OpenAICompatibleVisionProvider(_JsonRecoveryMixin):
         image_b64 = base64.b64encode(image_path.read_bytes()).decode('utf-8')
         prompt = (
             'Identify the grocery product in this image. '
-            'Return JSON only with keys: name, brand, size_label, category, barcode, confidence, raw_text. '
-            'Keep raw_text under 80 chars. Keep confidence between 0 and 1. Use null when unknown. No markdown.'
+            'Return JSON only with keys: name, brand, size_label, category, barcode, confidence. '
+            'Each value should be short. Keep confidence between 0 and 1. Use null when unknown. '
+            'Do not say anything before the JSON. Start the response with { and end with }.'
         )
         payload = {
             'model': self.model,
@@ -126,7 +130,7 @@ class OpenAICompatibleVisionProvider(_JsonRecoveryMixin):
                 }
             ],
             'temperature': 0,
-            'max_tokens': 180,
+            'max_tokens': 120,
             'stream': False,
         }
         headers = {'Authorization': f'Bearer {self.api_key}', 'Content-Type': 'application/json'}
@@ -149,20 +153,31 @@ class OpenAICompatibleVisionProvider(_JsonRecoveryMixin):
                 category=obj.get('category'),
                 barcode=obj.get('barcode'),
                 confidence=float(obj.get('confidence') or 0),
-                raw_text=obj.get('raw_text'),
+                raw_text=None,
             )
         except Exception as exc:
             self.last_error = str(exc)
             return None
 
 
-class GeminiVisionProvider(_JsonRecoveryMixin):
+class GeminiVisionProvider:
     def __init__(self, *, api_key: str, model: str, timeout_seconds: int = 120):
         self.api_key = api_key
         self.model = model
         self.timeout_seconds = timeout_seconds
         self.last_error: str | None = None
         self.last_response_preview: str | None = None
+
+    def _extract_field(self, text: str, label: str) -> str | None:
+        m = re.search(rf'{label}\s*[:\-]\s*(.+)', text, re.I)
+        if not m:
+            return None
+        value = m.group(1).strip()
+        value = re.split(r'\n|\r', value)[0].strip()
+        value = value.strip('"*` ')
+        if value.lower() in {'null', 'none', 'unknown', 'n/a', 'not visible'}:
+            return None
+        return value[:120]
 
     def identify(self, image_path: Path) -> VisionIdentification | None:
         self.last_error = None
@@ -175,8 +190,11 @@ class GeminiVisionProvider(_JsonRecoveryMixin):
         image_b64 = base64.b64encode(image_path.read_bytes()).decode('utf-8')
         prompt = (
             'Identify the grocery product in this image. '
-            'Return JSON only with keys: name, brand, size_label, category, barcode, confidence, raw_text. '
-            'Keep raw_text under 80 chars. Keep confidence between 0 and 1. Use null when unknown. No markdown.'
+            'Respond in exactly three short lines only, nothing else:\n'
+            'NAME: ...\n'
+            'BRAND: ...\n'
+            'SIZE_LABEL: ...\n'
+            'Use null when unknown.'
         )
         payload = {
             'contents': [
@@ -190,8 +208,7 @@ class GeminiVisionProvider(_JsonRecoveryMixin):
             ],
             'generationConfig': {
                 'temperature': 0,
-                'responseMimeType': 'application/json',
-                'maxOutputTokens': 180,
+                'maxOutputTokens': 80,
             },
         }
         url = f'https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}'
@@ -203,16 +220,15 @@ class GeminiVisionProvider(_JsonRecoveryMixin):
                 data = response.json()
             text = data['candidates'][0]['content']['parts'][0]['text']
             self.last_response_preview = str(text)[:1200]
-            obj = self._extract_json_object(str(text))
             return VisionIdentification(
                 provider='gemini',
-                name=obj.get('name'),
-                brand=obj.get('brand'),
-                size_label=obj.get('size_label'),
-                category=obj.get('category'),
-                barcode=obj.get('barcode'),
-                confidence=float(obj.get('confidence') or 0),
-                raw_text=obj.get('raw_text'),
+                name=self._extract_field(text, 'NAME'),
+                brand=self._extract_field(text, 'BRAND'),
+                size_label=self._extract_field(text, 'SIZE_LABEL'),
+                category=None,
+                barcode=None,
+                confidence=0.7 if self._extract_field(text, 'NAME') else 0.0,
+                raw_text=str(text)[:500],
             )
         except Exception as exc:
             self.last_error = str(exc)

@@ -1,0 +1,32 @@
+[
+  {
+    "canonical_name": "Sunsol High Protein Granola Choc Almond",
+    "brand": "Sunsol",
+    "size_label": "450g",
+    "category": "cereal",
+    "image_url": "https://images.example.com/products/sunsol-granola-choc-almond-450g.jpg",
+    "barcode": "9300000000035",
+    "offers": [
+      {
+        "store_code": "woolworths",
+        "source_product_ref": "ww-sunsol-granola-450g",
+        "image_url": "https://images.example.com/offers/ww-sunsol-granola-450g.jpg",
+        "current_price": 7.0,
+        "unit_price_value": 1.56,
+        "unit_price_unit": "100g",
+        "promo_flag": false,
+        "promo_text": null
+      },
+      {
+        "store_code": "coles",
+        "source_product_ref": "co-sunsol-granola-450g",
+        "image_url": "https://images.example.com/offers/co-sunsol-granola-450g.jpg",
+        "current_price": 6.5,
+        "unit_price_value": 1.44,
+        "unit_price_unit": "100g",
+        "promo_flag": true,
+        "promo_text": "Special"
+      }
+    ]
+  }
+]

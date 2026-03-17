@@ -50,7 +50,8 @@ Then open: <http://127.0.0.1:8000/health>
 - First image-upload identification scaffold at `/vision/identify-product`
 - Barcode-first, OCR-fallback product identification flow scaffold
 - OCR extraction code path integrated (uses `tesseract` when available)
-- Vision provider interface + placeholder multimodal identifier scaffold integrated
+- Vision provider interface + working Gemini multimodal identifier integrated
+- Generic JSON product importer scaffold available for loading real catalog samples
 
 ## Notes
 - Start read-only for supermarket and loyalty integrations

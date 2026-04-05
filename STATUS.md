@@ -58,6 +58,7 @@ Grocery Goblin is an Australian grocery savings assistant focused on basket pric
 
 ## Current backend progress
 - Importer scaffolding exists with a generic JSON file import path
+- ALDI now has a real searchable product API path wired into the importer layer
 - Vision identification can now feed into structured product matching
 - Gemini is the main free vision provider and returns stable structured product fields on tested grocery photos
 

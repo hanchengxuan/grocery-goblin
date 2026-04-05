@@ -53,6 +53,7 @@ Then open: <http://127.0.0.1:8000/health>
 - Vision provider interface + working Gemini multimodal identifier integrated
 - Generic JSON product importer scaffold available for loading real catalog samples
 - Store-specific importer skeletons exist for Woolworths / Coles / ALDI feeds, with sample feed fixtures for all three
+- ALDI real product search API path is now wired for live fetch-and-import
 
 ## Notes
 - Start read-only for supermarket and loyalty integrations

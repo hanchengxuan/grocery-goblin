@@ -11,3 +11,4 @@ Pillow==11.3.0
 pyzbar==0.1.9
 pytesseract==0.3.13
 httpx==0.28.1
+requests==2.32.5
